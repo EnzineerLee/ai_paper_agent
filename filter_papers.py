@@ -60,13 +60,9 @@ def calc_price(model, usage):
 @retry.retry(tries=3, delay=2)
 def call_gemini(full_prompt, model):
     try:
-        # API 키를 직접 사용하여 모델을 생성
-        api_key = os.environ.get("GEMINI_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_KEY environment variable is not set")
-        
-        # 매 호출마다 새로운 모델 인스턴스 생성
-        model = genai.GenerativeModel('gemini-pro', api_key=api_key)
+        # 전달받은 모델 객체를 사용
+        if model is None:
+            raise ValueError("Gemini model instance is not provided")
         response = model.generate_content(full_prompt)
         return response
     except Exception as e:
@@ -237,72 +233,24 @@ def filter_by_gpt(
 
 
 if __name__ == "__main__":
+    # 환경 변수에서 GEMINI_KEY를 가져옵니다.
+    gemini_key = os.environ.get("GEMINI_KEY")
+    if not gemini_key:
+        raise ValueError("GEMINI_KEY environment variable is not set")
+
+    # Gemini 모델 객체를 생성합니다.
+    model = genai.GenerativeModel('gemini-pro', api_key=gemini_key)
+
+    # 설정 파일을 로드합니다.
     config = configparser.ConfigParser()
-    config.read("configs/config.ini")
-    # now load the api keys
-    S2_API_KEY = os.environ.get("S2_KEY")
-    GEMINI_KEY = os.environ.get("GEMINI_KEY")
-    if GEMINI_KEY is None:
-        raise ValueError(
-            "Gemini key is not set - please set GEMINI_KEY environment variable in GitHub Actions"
-        )
-    
-    # Gemini API 초기화 - 여기서는 모델을 생성하지 않고 API 키만 설정
-    genai.configure(api_key=GEMINI_KEY)
-    
-    # deal with config parsing
-    with open("configs/base_prompt.txt", "r") as f:
-        base_prompt = f.read()
-    with open("configs/paper_topics.txt", "r") as f:
-        criterion = f.read()
-    with open("configs/postfix_prompt.txt", "r") as f:
-        postfix_prompt = f.read()
-    # loads papers from 'in/debug_papers.json' and filters them
-    with open("in/debug_papers.json", "r") as f:
-        # with open("in/gpt_paper_batches.debug-11-10.json", "r") as f:
-        paper_list_in_dict = json.load(f)
-    papers = [
-        [
-            Paper(
-                arxiv_id=paper["arxiv_id"],
-                authors=paper["authors"],
-                title=paper["title"],
-                abstract=paper["abstract"],
-            )
-            for paper in batch
-        ]
-        for batch in paper_list_in_dict
-    ]
-    all_papers = {}
-    paper_outputs = {}
-    sort_dict = {}
-    total_cost = 0
-    for batch in tqdm(papers):
-        json_dicts, cost = run_on_batch(
-            batch, base_prompt, criterion, postfix_prompt, model, config
-        )
-        total_cost += cost
-        for paper in batch:
-            all_papers[paper.arxiv_id] = paper
-        for jdict in json_dicts:
-            paper_outputs[jdict["ARXIVID"]] = {
-                **dataclasses.asdict(all_papers[jdict["ARXIVID"]]),
-                **jdict,
-            }
-            sort_dict[jdict["ARXIVID"]] = jdict["RELEVANCE"] + jdict["NOVELTY"]
+    config.read('config.ini')
 
-        # sort the papers by relevance and novelty
-    print("total cost:" + str(total_cost))
-    keys = list(sort_dict.keys())
-    values = list(sort_dict.values())
+    # 필요한 데이터 구조를 초기화합니다.
+    all_authors = {}  # 저자 정보를 저장할 딕셔너리
+    papers = []  # 논문 목록
+    all_papers = {}  # 모든 논문 정보
+    selected_papers = {}  # 선택된 논문 정보
+    sort_dict = {}  # 정렬을 위한 딕셔너리
 
-    def argsort(seq):
-        return sorted(range(len(seq)), key=seq.__getitem__)
-
-    sorted_keys = [keys[idx] for idx in argsort(values)[::-1]]
-    selected_papers = {key: paper_outputs[key] for key in sorted_keys}
-
-    with open(
-        config["OUTPUT"]["output_path"] + "filter_paper_test.debug.json", "w"
-    ) as outfile:
-        json.dump(selected_papers, outfile, cls=EnhancedJSONEncoder, indent=4)
+    # filter_by_gpt 함수를 호출합니다.
+    filter_by_gpt(all_authors, papers, config, model, all_papers, selected_papers, sort_dict)
