@@ -207,7 +207,7 @@ if __name__ == "__main__":
         all_authors.update(set(paper.authors))
     if config["OUTPUT"].getboolean("debug_messages"):
         print("Getting author info for " + str(len(all_authors)) + " authors")
-    all_authors = get_authors(list(all_authors), S2_API_KEY)
+    all_authors = get_authors(list(all_authors), GEMINI_KEY)
 
     if config["OUTPUT"].getboolean("dump_debug_file"):
         with open(
