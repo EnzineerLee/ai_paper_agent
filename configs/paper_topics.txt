@@ -1,0 +1,21 @@
+1. Institutional credibility
+   - Relevant: Research from well-known academic institutions, established tech companies (Google, Meta, Microsoft, etc.), or recognized research labs
+   - Not relevant: Papers without clear institutional affiliation or from unknown organizations
+
+2. Technical focus and methodology
+   - Relevant: Papers specifically focused on RAG architecture improvements, novel retrieval methods, or significant performance enhancements in RAG systems
+   - Not relevant: Papers that merely mention RAG as a baseline or papers focusing on general language models without specific RAG components
+
+3. Experimental validation and results
+   - Relevant: Papers with comprehensive experiments, ablation studies, and clear performance metrics showing RAG improvements
+   - Not relevant: Papers with limited experimental validation or unclear performance comparisons
+
+4. Implementation details
+   - Relevant: Papers providing detailed architectural information, code implementations, or practical deployment considerations
+   - Not relevant: Papers with vague implementation details or purely theoretical discussions without practical applications
+
+5. Application domains
+   - Relevant: Papers demonstrating RAG applications in real-world scenarios or novel use cases with clear benefits
+   - Not relevant: Papers with generic applications or without clear RAG-specific advantages
+
+In suggesting papers to your friend, remember that they are primarily interested in practical RAG implementations that overcome traditional limitations and demonstrate significant performance improvements in real-world scenarios, with clear, implementable solutions rather than theoretical discussions.They particularly value papers that provide detailed experimental results, concrete architectural improvements, and specific optimization techniques that can be directly applied to enhance RAG systems.They prefer not to spend time on purely theoretical papers, basic implementations, or papers that simply apply existing RAG methods to new domains without meaningful technical innovations.

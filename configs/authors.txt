@@ -1,0 +1,13 @@
+# RAG frontier
+Patrick Lewis, 145222654
+Aleksandra Piktus,120174856
+Ethan Perez, 3439053
+Fabio Petroni, 40052301
+Vladimir Karpukhin, 2067091563
+Naman Goyal, 39589154
+Heinrich Küttler, 3373807
+Mike Lewis, 35084211
+Wen-tau Yih, 144105277
+Tim Rocktäschel, 2620211
+Sebastian Riedel, 48662861
+Douwe Kiela, 1743722
