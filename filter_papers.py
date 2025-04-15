@@ -5,7 +5,7 @@ import re
 from typing import List
 
 import retry
-from openai import OpenAI
+import google.generativeai as genai
 from tqdm import tqdm
 
 from arxiv_scraper import Paper
@@ -52,28 +52,20 @@ def filter_papers_by_hindex(all_authors, papers, config):
 
 
 def calc_price(model, usage):
-    if model == "gpt-4-1106-preview":
-        return (0.01 * usage.prompt_tokens + 0.03 * usage.completion_tokens) / 1000.0
-    if model == "gpt-4":
-        return (0.03 * usage.prompt_tokens + 0.06 * usage.completion_tokens) / 1000.0
-    if (model == "gpt-3.5-turbo") or (model == "gpt-3.5-turbo-1106"):
-        return (0.0015 * usage.prompt_tokens + 0.002 * usage.completion_tokens) / 1000.0
+    # Gemini API는 현재 무료이므로 0을 반환
+    return 0.0
 
 
 @retry.retry(tries=3, delay=2)
-def call_chatgpt(full_prompt, openai_client, model):
-    return openai_client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": full_prompt}],
-        temperature=0.0,
-        seed=0,
-    )
+def call_gemini(full_prompt, model):
+    response = model.generate_content(full_prompt)
+    return response
 
 
-def run_and_parse_chatgpt(full_prompt, openai_client, config):
-    # just runs the chatgpt prompt, tries to parse the resulting JSON
-    completion = call_chatgpt(full_prompt, openai_client, config["SELECTION"]["model"])
-    out_text = completion.choices[0].message.content
+def run_and_parse_gemini(full_prompt, model, config):
+    # Gemini API를 호출하고 결과를 파싱
+    response = call_gemini(full_prompt, model)
+    out_text = response.text
     out_text = re.sub("```jsonl\n", "", out_text)
     out_text = re.sub("```", "", out_text)
     out_text = re.sub(r"\n+", "\n", out_text)
@@ -90,9 +82,9 @@ def run_and_parse_chatgpt(full_prompt, openai_client, config):
                 print("Failed to parse LM output as json")
                 print(out_text)
                 print("RAW output")
-                print(completion.choices[0].message.content)
+                print(response.text)
             continue
-    return json_dicts, calc_price(config["SELECTION"]["model"], completion.usage)
+    return json_dicts, 0.0  # Gemini API는 현재 무료이므로 비용은 0
 
 
 def paper_to_string(paper_entry: Paper) -> str:
@@ -119,7 +111,7 @@ def batched(items, batch_size):
 
 
 def filter_papers_by_title(
-    papers, config, openai_client, base_prompt, criterion
+    papers, config, model, base_prompt, criterion
 ) -> List[Paper]:
     filter_postfix = 'Identify any papers that are absolutely and completely irrelavent to the criteria, and you are absolutely sure your friend will not enjoy, formatted as a list of arxiv ids like ["ID1", "ID2", "ID3"..]. Be extremely cautious, and if you are unsure at all, do not add a paper in this list. You will check it in detail later.\n Directly respond with the list, do not add ANY extra text before or after the list. Even if every paper seems irrelevant, please keep at least TWO papers'
     batches_of_papers = batched(papers, 20)
@@ -130,10 +122,8 @@ def filter_papers_by_title(
         full_prompt = (
             base_prompt + "\n " + criterion + "\n" + papers_string + filter_postfix
         )
-        model = config["SELECTION"]["model"]
-        completion = call_chatgpt(full_prompt, openai_client, model)
-        cost += calc_price(model, completion.usage)
-        out_text = completion.choices[0].message.content
+        response = call_gemini(full_prompt, model)
+        out_text = response.text
         try:
             filtered_set = set(json.loads(out_text))
             for paper in batch:
@@ -144,7 +134,7 @@ def filter_papers_by_title(
         except Exception as ex:
             print("Exception happened " + str(ex))
             print("Failed to parse LM output as list " + out_text)
-            print(completion)
+            print(response)
             continue
     return final_list, cost
 
@@ -154,7 +144,7 @@ def paper_to_titles(paper_entry: Paper) -> str:
 
 
 def run_on_batch(
-    paper_batch, base_prompt, criterion, postfix_prompt, openai_client, config
+    paper_batch, base_prompt, criterion, postfix_prompt, model, config
 ):
     batch_str = [paper_to_string(paper) for paper in paper_batch]
     full_prompt = "\n".join(
@@ -165,12 +155,12 @@ def run_on_batch(
             postfix_prompt,
         ]
     )
-    json_dicts, cost = run_and_parse_chatgpt(full_prompt, openai_client, config)
+    json_dicts, cost = run_and_parse_gemini(full_prompt, model, config)
     return json_dicts, cost
 
 
 def filter_by_gpt(
-    all_authors, papers, config, openai_client, all_papers, selected_papers, sort_dict
+    all_authors, papers, config, model, all_papers, selected_papers, sort_dict
 ):
     # deal with config parsing
     with open("configs/base_prompt.txt", "r") as f:
@@ -187,7 +177,7 @@ def filter_by_gpt(
             print(str(len(paper_list)) + " papers after hindex filtering")
         cost = 0
         paper_list, cost = filter_papers_by_title(
-            paper_list, config, openai_client, base_prompt, criterion
+            paper_list, config, model, base_prompt, criterion
         )
         if config["OUTPUT"].getboolean("debug_messages"):
             print(
@@ -197,13 +187,13 @@ def filter_by_gpt(
             )
         all_cost += cost
 
-        # batch the remaining papers and invoke GPT
+        # batch the remaining papers and invoke Gemini
         batch_of_papers = batched(paper_list, int(config["SELECTION"]["batch_size"]))
         scored_batches = []
         for batch in tqdm(batch_of_papers):
             scored_in_batch = []
             json_dicts, cost = run_on_batch(
-                batch, base_prompt, criterion, postfix_prompt, openai_client, config
+                batch, base_prompt, criterion, postfix_prompt, model, config
             )
             all_cost += cost
             for jdict in json_dicts:
@@ -241,7 +231,8 @@ if __name__ == "__main__":
     keyconfig = configparser.ConfigParser()
     keyconfig.read("configs/keys.ini")
     S2_API_KEY = keyconfig["KEYS"]["semanticscholar"]
-    openai_client = OpenAI(api_key=keyconfig["KEYS"]["openai"])
+    genai.configure(api_key=keyconfig["KEYS"]["gemini"])
+    model = genai.GenerativeModel('gemini-pro')
     # deal with config parsing
     with open("configs/base_prompt.txt", "r") as f:
         base_prompt = f.read()
@@ -271,7 +262,7 @@ if __name__ == "__main__":
     total_cost = 0
     for batch in tqdm(papers):
         json_dicts, cost = run_on_batch(
-            batch, base_prompt, criterion, postfix_prompt, openai_client, config
+            batch, base_prompt, criterion, postfix_prompt, model, config
         )
         total_cost += cost
         for paper in batch:

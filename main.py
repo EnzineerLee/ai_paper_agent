@@ -3,7 +3,7 @@ import configparser
 import os
 import time
 
-from openai import OpenAI
+import google.generativeai as genai
 from requests import Session
 from typing import TypeVar, Generator
 import io
@@ -186,12 +186,14 @@ if __name__ == "__main__":
     config.read("configs/config.ini")
 
     S2_API_KEY = os.environ.get("S2_KEY")
-    OAI_KEY = os.environ.get("OAI_KEY")
-    if OAI_KEY is None:
+    GEMINI_KEY = os.environ.get("GEMINI_KEY")
+    if GEMINI_KEY is None:
         raise ValueError(
-            "OpenAI key is not set - please set OAI_KEY to your OpenAI key"
+            "Gemini key is not set - please set GEMINI_KEY to your Gemini API key"
         )
-    openai_client = OpenAI(api_key=OAI_KEY)
+    genai.configure(api_key=GEMINI_KEY)
+    model = genai.GenerativeModel('gemini-pro')
+    
     # load the author list
     with io.open("configs/authors.txt", "r") as fopen:
         author_names, author_ids = parse_authors(fopen.readlines())
@@ -228,7 +230,7 @@ if __name__ == "__main__":
         all_authors,
         papers,
         config,
-        openai_client,
+        model,
         all_papers,
         selected_papers,
         sort_dict,
