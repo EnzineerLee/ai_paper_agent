@@ -2,6 +2,7 @@ import configparser
 import dataclasses
 import json
 import re
+import os
 from typing import List
 
 import retry
@@ -58,8 +59,12 @@ def calc_price(model, usage):
 
 @retry.retry(tries=3, delay=2)
 def call_gemini(full_prompt, model):
-    response = model.generate_content(full_prompt)
-    return response
+    try:
+        response = model.generate_content(full_prompt)
+        return response
+    except Exception as e:
+        print(f"Gemini API 호출 중 오류 발생: {str(e)}")
+        raise
 
 
 def run_and_parse_gemini(full_prompt, model, config):
@@ -228,10 +233,13 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("configs/config.ini")
     # now load the api keys
-    keyconfig = configparser.ConfigParser()
-    keyconfig.read("configs/keys.ini")
-    S2_API_KEY = keyconfig["KEYS"]["semanticscholar"]
-    genai.configure(api_key=keyconfig["KEYS"]["gemini"])
+    S2_API_KEY = os.environ.get("S2_KEY")
+    GEMINI_KEY = os.environ.get("GEMINI_KEY")
+    if GEMINI_KEY is None:
+        raise ValueError(
+            "Gemini key is not set - please set GEMINI_KEY environment variable in GitHub Actions"
+        )
+    genai.configure(api_key=GEMINI_KEY)
     model = genai.GenerativeModel('gemini-pro')
     # deal with config parsing
     with open("configs/base_prompt.txt", "r") as f:

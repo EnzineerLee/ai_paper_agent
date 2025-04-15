@@ -189,8 +189,10 @@ if __name__ == "__main__":
     GEMINI_KEY = os.environ.get("GEMINI_KEY")
     if GEMINI_KEY is None:
         raise ValueError(
-            "Gemini key is not set - please set GEMINI_KEY to your Gemini API key"
+            "Gemini key is not set - please set GEMINI_KEY environment variable in GitHub Actions"
         )
+    
+    # Gemini API 초기화
     genai.configure(api_key=GEMINI_KEY)
     model = genai.GenerativeModel('gemini-pro')
     
