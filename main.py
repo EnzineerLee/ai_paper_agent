@@ -193,7 +193,7 @@ if __name__ == "__main__":
     genai.configure(api_key=GEMINI_KEY)
     
     # Gemini 모델 객체를 생성합니다.
-    model = genai.GenerativeModel('Gemini 2.0 Flash')
+    model = genai.GenerativeModel('gemini-2.0-flash')
 
     # 설정 파일을 로드합니다.
     config = configparser.ConfigParser()
