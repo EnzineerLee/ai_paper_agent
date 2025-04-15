@@ -238,8 +238,11 @@ if __name__ == "__main__":
     if not gemini_key:
         raise ValueError("GEMINI_KEY environment variable is not set")
 
+    # Gemini API 키를 직접 설정합니다.
+    genai.configure(api_key=gemini_key)
+    
     # Gemini 모델 객체를 생성합니다.
-    model = genai.GenerativeModel('gemini-pro', api_key=gemini_key)
+    model = genai.GenerativeModel('gemini-pro')
 
     # 설정 파일을 로드합니다.
     config = configparser.ConfigParser()
