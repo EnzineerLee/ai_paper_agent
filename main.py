@@ -212,7 +212,7 @@ if __name__ == "__main__":
     author_id_set = set(author_ids)
 
     papers = list(get_papers_from_arxiv(config))
-    papers = papers[:10] #
+    # papers = papers[:10] #
     # dump all papers for debugging
 
     all_authors = set()
