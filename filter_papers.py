@@ -3,6 +3,7 @@ import dataclasses
 import json
 import re
 import os
+import time
 from typing import List
 
 import retry
@@ -223,6 +224,8 @@ def filter_by_gpt(
                     }
                 )
             scored_batches.append(scored_in_batch)
+            # API 요청 간 지연 추가 (Semantic Scholar API 제한 방지)
+            time.sleep(1)
         if config["OUTPUT"].getboolean("dump_debug_file"):
             with open(
                 config["OUTPUT"]["output_path"] + "gpt_paper_batches.debug.json", "w"
@@ -246,7 +249,7 @@ if __name__ == "__main__":
 
     # 설정 파일을 로드합니다.
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config.read('configs/config.ini')
 
     # 필요한 데이터 구조를 초기화합니다.
     all_authors = {}  # 저자 정보를 저장할 딕셔너리

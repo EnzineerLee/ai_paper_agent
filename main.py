@@ -115,6 +115,8 @@ def get_one_author(session, author: str, S2_API_KEY: str) -> str:
         try:
             response.raise_for_status()
             response_json = response.json()
+            # API 요청 간 지연 추가 (Semantic Scholar API 제한 방지)
+            time.sleep(1)
             if len(response_json["data"]) >= 1:
                 return response_json["data"]
             else:
@@ -181,26 +183,29 @@ def parse_authors(lines):
 
 
 if __name__ == "__main__":
-    # now load config.ini
-    config = configparser.ConfigParser()
-    config.read("configs/config.ini")
-
-    S2_API_KEY = os.environ.get("S2_KEY")
+    # 환경 변수에서 API 키를 가져옵니다.
+    S2_API_KEY = os.environ.get("S2_API_KEY")
     GEMINI_KEY = os.environ.get("GEMINI_KEY")
-    if GEMINI_KEY is None:
-        # 환경 변수에서 키를 찾지 못한 경우 configs/keys.ini에서 시도
-        keyconfig = configparser.ConfigParser()
-        keyconfig.read("configs/keys.ini")
-        GEMINI_KEY = keyconfig["KEYS"]["gemini"]
-        if GEMINI_KEY == "your_gemini_key_here":
-            raise ValueError(
-                "Gemini key is not set - please set GEMINI_KEY environment variable or update configs/keys.ini"
-            )
-    
-    # Gemini API 초기화
+    if not GEMINI_KEY:
+        raise ValueError("GEMINI_KEY environment variable is not set")
+
+    # Gemini API 키를 직접 설정합니다.
     genai.configure(api_key=GEMINI_KEY)
-    model = genai.GenerativeModel('gemini-pro')
     
+    # Gemini 모델 객체를 생성합니다.
+    model = genai.GenerativeModel('gemini-pro')
+
+    # 설정 파일을 로드합니다.
+    config = configparser.ConfigParser()
+    config.read('configs/config.ini')
+
+    # 필요한 데이터 구조를 초기화합니다.
+    all_authors = {}  # 저자 정보를 저장할 딕셔너리
+    papers = []  # 논문 목록
+    all_papers = {}  # 모든 논문 정보
+    selected_papers = {}  # 선택된 논문 정보
+    sort_dict = {}  # 정렬을 위한 딕셔너리
+
     # load the author list
     with io.open("configs/authors.txt", "r") as fopen:
         author_names, author_ids = parse_authors(fopen.readlines())
