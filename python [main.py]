@@ -1,0 +1,14 @@
+papers = list(get_papers_from_arxiv(config))
+papers = papers[:10] # 처음 10개 논문만 사용하도록 슬라이싱 추가
+
+# dump all papers for debugging 
+
+all_authors = set()
+for paper in papers:
+    all_authors.update(set(paper.authors))
+if config["OUTPUT"].getboolean("debug_messages"):
+    print("Getting author info for " + str(len(all_authors)) + " authors")
+
+# 처리할 저자 수를 20명으로 제한
+limited_authors = list(all_authors)[:20]
+all_authors = get_authors(limited_authors, S2_API_KEY) 
