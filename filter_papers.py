@@ -60,6 +60,13 @@ def calc_price(model, usage):
 @retry.retry(tries=3, delay=2)
 def call_gemini(full_prompt, model):
     try:
+        # API 키를 직접 사용하여 모델을 생성
+        api_key = os.environ.get("GEMINI_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_KEY environment variable is not set")
+        
+        # 매 호출마다 새로운 모델 인스턴스 생성
+        model = genai.GenerativeModel('gemini-pro', api_key=api_key)
         response = model.generate_content(full_prompt)
         return response
     except Exception as e:
@@ -239,8 +246,10 @@ if __name__ == "__main__":
         raise ValueError(
             "Gemini key is not set - please set GEMINI_KEY environment variable in GitHub Actions"
         )
+    
+    # Gemini API 초기화 - 여기서는 모델을 생성하지 않고 API 키만 설정
     genai.configure(api_key=GEMINI_KEY)
-    model = genai.GenerativeModel('gemini-pro')
+    
     # deal with config parsing
     with open("configs/base_prompt.txt", "r") as f:
         base_prompt = f.read()

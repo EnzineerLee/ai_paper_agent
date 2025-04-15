@@ -188,9 +188,14 @@ if __name__ == "__main__":
     S2_API_KEY = os.environ.get("S2_KEY")
     GEMINI_KEY = os.environ.get("GEMINI_KEY")
     if GEMINI_KEY is None:
-        raise ValueError(
-            "Gemini key is not set - please set GEMINI_KEY environment variable in GitHub Actions"
-        )
+        # 환경 변수에서 키를 찾지 못한 경우 configs/keys.ini에서 시도
+        keyconfig = configparser.ConfigParser()
+        keyconfig.read("configs/keys.ini")
+        GEMINI_KEY = keyconfig["KEYS"]["gemini"]
+        if GEMINI_KEY == "your_gemini_key_here":
+            raise ValueError(
+                "Gemini key is not set - please set GEMINI_KEY environment variable or update configs/keys.ini"
+            )
     
     # Gemini API 초기화
     genai.configure(api_key=GEMINI_KEY)
@@ -209,7 +214,7 @@ if __name__ == "__main__":
         all_authors.update(set(paper.authors))
     if config["OUTPUT"].getboolean("debug_messages"):
         print("Getting author info for " + str(len(all_authors)) + " authors")
-    all_authors = get_authors(list(all_authors), GEMINI_KEY)
+    all_authors = get_authors(list(all_authors), S2_API_KEY)
 
     if config["OUTPUT"].getboolean("dump_debug_file"):
         with open(
